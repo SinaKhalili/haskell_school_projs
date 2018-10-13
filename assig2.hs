@@ -2,19 +2,19 @@
 
 
 
--- *OBJECTIVE : Create a symbolic derivative evaluator. This is done by accomplishing these tasks:  
----                    (1) Parser for mathamatical expression 
----                    (2) Symbolic Derivative Function (for the parsed expression) 
----                    (3) Unparser for the algebraic expression 
-{- 
+-- *OBJECTIVE : Create a symbolic derivative evaluator. This is done by accomplishing these tasks:
+---                    (1) Parser for mathamatical expression
+---                    (2) Symbolic Derivative Function (for the parsed expression)
+---                    (3) Unparser for the algebraic expression
+{-
                         IF wanted: Can create a Simplifier using the inside-out method
 -}
 
-data ME = Num Int 
+data ME = Num Int
           | Var Char
           | Group ME
           | Sum [ME]
-          | Product [ME] 
+          | Product [ME]
           | Power ME Int
           | Neg ME
           deriving (Show, Ord, Eq)
@@ -26,10 +26,25 @@ data ME = Num Int
 parseME :: [Char] -> Maybe ME
 parseElement :: [Char] -> Maybe (ME, [Char])
 
+parseNumberHelp :: [Char] -> [Char]
+parseNumberHelp [] = []
+parseNumberHelp (c:s)
+  | c <= '9' && c >= '0' = 1 + parseNumberHelp (s)
+  | otherwise = []
+
+parseNumber :: [Char] -> (ME, [Char])
+parseNumber xs = (Num (read $ take (parseNumberHelp xs) xs :: Int),
+                              drop (parseNumberHelp xs) xs)
 
 -- This is the absolute base case - it can take in a variable (only one) and len 1 or any len nums
 -- TODO: Get this method working properly (variables of len 1 and numbers only) <- how to check?
 parseChar :: [Char] -> Maybe (ME, [Char])
+parseChar [] = Nothing
+parseChar (c:s)
+  | c == '+' || c == '*' || c == '(' || c == ')' || c == '-'   = Nothing
+  | c <= '9' && c >= '0'    = Just parseNumber  c:s  --- Looks like its all symbolic, so no need nums
+  | otherwise               = Just ((Var c ), s)
+
 
 -- This function parses until it stops at a unknown (to it) character. Its Nothing cond
 -- only reached if first not match - essentially "parseTillStop" ing on the first element -> Nothing
@@ -37,11 +52,11 @@ parseTillStop :: [Char] -> Maybe (ME, [Char])
 
 
 
-parseToGroup :: [Char] -> Maybe (ME, [Char]) 
+parseToGroup :: [Char] -> Maybe (ME, [Char])
 keepParsing :: [Char] -> Maybe (ME, [Char])
 
--- * Notice that it only accepts an empty array in the tuple - this catches nothings propped 
-parseME s = case parseTillStop s of 
+-- * Notice that it only accepts an empty array in the tuple - this catches nothings propped
+parseME s = case parseTillStop s of
     Just (me, []) -> Just me
     _ -> Nothing
 
@@ -51,24 +66,17 @@ parseTillStop s =
         _ -> Nothing
 
 extendTheGroup (e1, after1) =
-    case parseItem(after1) of 
+    case parseItem(after1) of
         Just(e2, more) -> extendTheGroup(Group e1 e2, more)
         _ -> Just(e1, after1)
 
 
 keepParsing (e1, []) = Just (e1, [])
 keepParsing (e1, '|' : after_bar) =
-    case parseAnother(after_bar) of 
+    case parseAnother(after_bar) of
         Just(e2, more) -> keepParsing(Alt e1 e2, more)
         _ -> Nothing
 keepParsing(e1, c:more) = Just (e1, c:more)
-
-
-parseChar [] = Nothing
-parseChar (c:s)
-  | c == '+' || c == '*' || c == '(' || c == ')' || c == '-'   = Nothing
-   --- Looks like its all symbolic, so no need nums
-  | otherwise               = Just ((Var c ), s)
 
 parseElement ('(':more) =
     case parseME(more) of
@@ -88,7 +96,7 @@ unparseME :: ME -> [Char]
 deriv :: ME -> Char -> ME
 
 simplifyME :: ME -> ME
-simplifyME e = e 
+simplifyME e = e
 
 
 -- Main Program
